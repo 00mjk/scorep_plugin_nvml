@@ -1,0 +1,1 @@
+#include <scorep/plugin/plugin.hpp>
