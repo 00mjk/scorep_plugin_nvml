@@ -1,3 +1,5 @@
+#include "nvml_wrapper.hpp"
+
 #include <scorep/plugin/plugin.hpp>
 
 #include <nvml.h>
@@ -5,18 +7,20 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 using namespace scorep::plugin::policy;
 
 using scorep::plugin::logging;
 
 struct nvml_t {
-    nvml_t(const std::string& name_, unsigned int device_id_)
-        : name(name_), device_id(device_id_)
+    nvml_t(const std::string& name_, unsigned int device_id_, nvml_metric metric_)
+        : name(name_), device_id(device_id_), metric(metric_)
     {
     }
     std::string name;
     unsigned int device_id;
+    nvml_metric metric;
 };
 
 template <typename T, typename Policies>
@@ -31,11 +35,21 @@ public:
 
         nvmlReturn_t nvml = nvmlInit_v2();
         if (NVML_SUCCESS != nvml) {
-            throw std::runtime_error("Could not start NVML Code: " +
+            throw std::runtime_error("Could not start NVML. Code: " +
                                      std::string(nvmlErrorString(nvml)));
         }
         nvml_devices = get_visible_devices();
         logging::debug() << "end constructor";
+    }
+
+    ~nvml_plugin()
+    {
+        nvmlReturn_t nvml = nvmlShutdown();
+        if (NVML_SUCCESS != nvml) {
+//            throw std::runtime_error("Could not terminate NVML. Code: " +
+//                                     std::string(nvmlErrorString(nvml)));
+            logging::warn() << "Could not terminate NVML. Code:" << std::string(nvmlErrorString(nvml));
+        }
     }
 
     // Convert a named metric (may contain wildcards or so) to a vector of
@@ -47,18 +61,20 @@ public:
 
         logging::info() << "get metric properties called with: " << metric_name;
 
+        nvml_metric metric_type = metricname_2_nvmlfunction(metric_name);
+
         for (unsigned int i = 0; i < nvml_devices.size(); ++i) {
             logging::info() << "before make_handle";
 
             /* TODO use device index by nvmlDeviceGetIndex( nvmlDevice_t device, unsigned int* index ) */
 
             std::string new_name = metric_name + " on CUDA: " + std::to_string(i);
-            auto handle = make_handle(new_name, nvml_t{metric_name, i});
+            auto handle = make_handle(new_name, nvml_t{metric_name, i, metric_type});
             logging::info() << "after make_handle";
             properties.push_back(scorep::plugin::metric_property(
-                new_name, "Power consumption", "mW")
+                new_name, "", "")
                                      .absolute_point()
-                                     .value_uint());
+                                     .value_double());
         }
         logging::debug() << "end get_metric_properties";
         return properties;
@@ -84,9 +100,11 @@ public:
         logging::debug() << "start end";
         end = scorep::chrono::measurement_clock::now();
 
-        /* TODO
-        for (auto& metric : get_handles())
-         */
+//        for (auto& handle : get_handles())
+//        {
+//            handle.data = get_value(handle.metric, nvml_devices[handle.device_id]);
+//        }
+
         logging::debug() << "end end";
     }
 
@@ -99,14 +117,9 @@ public:
         logging::info() << "get_all_values called with: " << handle.name
                         << " CUDA " << handle.device_id;
 
-        unsigned int power;
-        if (nvml_devices.size() == 0) {
-            logging::warn() << "no cuda devices found";
-            return;
-        }
-        nvmlDeviceGetPowerUsage(nvml_devices[handle.device_id], &power);
-        logging::debug() << "power usage: " << power;
-        cursor.write(end, (double) power); /* TODO unsigned int... */
+        unsigned int data = get_value(handle.metric, nvml_devices[handle.device_id]);
+        cursor.write(end, (double) data);
+
         logging::debug() << "end get_all_values";
     }
 
