@@ -31,15 +31,12 @@ class nvml_plugin
 public:
     nvml_plugin()
     {
-        logging::debug() << "start constructor";
-
         nvmlReturn_t nvml = nvmlInit_v2();
         if (NVML_SUCCESS != nvml) {
             throw std::runtime_error("Could not start NVML. Code: " +
                                      std::string(nvmlErrorString(nvml)));
         }
         nvml_devices = get_visible_devices();
-        logging::debug() << "end constructor";
     }
 
     ~nvml_plugin()
@@ -56,7 +53,6 @@ public:
     // actual metrics (may have a different name)
     std::vector<scorep::plugin::metric_property> get_metric_properties(const std::string& metric_name)
     {
-        logging::debug() << "start get_metric_properties";
         std::vector<scorep::plugin::metric_property> properties;
 
         logging::info() << "get metric properties called with: " << metric_name;
@@ -64,19 +60,16 @@ public:
         nvml_metric metric_type = metricname_2_nvmlfunction(metric_name);
 
         for (unsigned int i = 0; i < nvml_devices.size(); ++i) {
-            logging::info() << "before make_handle";
 
             /* TODO use device index by nvmlDeviceGetIndex( nvmlDevice_t device, unsigned int* index ) */
 
             std::string new_name = metric_name + " on CUDA: " + std::to_string(i);
             auto handle = make_handle(new_name, nvml_t{metric_name, i, metric_type});
-            logging::info() << "after make_handle";
             properties.push_back(scorep::plugin::metric_property(
                 new_name, "", "")
                                      .absolute_point()
                                      .value_double());
         }
-        logging::debug() << "end get_metric_properties";
         return properties;
     }
 
@@ -89,23 +82,18 @@ public:
     // start your measurement in this method
     void start()
     {
-        logging::debug() << "start start";
         begin = scorep::chrono::measurement_clock::now();
-        logging::debug() << "end start";
     }
 
     // stop your measurement in this method
     void stop()
     {
-        logging::debug() << "start end";
         end = scorep::chrono::measurement_clock::now();
 
 //        for (auto& handle : get_handles())
 //        {
 //            handle.data = get_value(handle.metric, nvml_devices[handle.device_id]);
 //        }
-
-        logging::debug() << "end end";
     }
 
     // Will be called post mortem by the measurement environment
@@ -113,14 +101,11 @@ public:
     template <typename C>
     void get_all_values(nvml_t& handle, C& cursor)
     {
-        logging::debug() << "start get_all_values";
         logging::info() << "get_all_values called with: " << handle.name
                         << " CUDA " << handle.device_id;
 
         unsigned int data = get_value(handle.metric, nvml_devices[handle.device_id]);
         cursor.write(end, (double) data);
-
-        logging::debug() << "end get_all_values";
     }
 
 private:
@@ -131,7 +116,6 @@ private:
 private:
     std::vector<nvmlDevice_t> get_visible_devices()
     {
-        logging::debug() << "start get_visible_devices";
         std::vector<nvmlDevice_t> devices;
 
         nvmlReturn_t ret;
@@ -154,7 +138,7 @@ private:
                 devices.push_back(device);
             }
             else if (NVML_ERROR_NO_PERMISSION == ret) {
-                logging::debug() << "No permission for device: " << i;
+                logging::info() << "No permission for device: " << i;
             }
             else {
                 throw std::runtime_error(nvmlErrorString(ret));
