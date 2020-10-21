@@ -68,7 +68,7 @@ public:
             properties.push_back(scorep::plugin::metric_property(
                 new_name, "", "")
                                      .absolute_point()
-                                     .value_double());
+                                     .value_uint());
         }
         return properties;
     }
@@ -104,8 +104,8 @@ public:
         logging::info() << "get_all_values called with: " << handle.name
                         << " CUDA " << handle.device_id;
 
-        unsigned int data = get_value(handle.metric, nvml_devices[handle.device_id]);
-        cursor.write(end, (double) data);
+        std::uint64_t data = get_value(handle.metric, nvml_devices[handle.device_id]);
+        cursor.write(end, data);
     }
 
 private:
