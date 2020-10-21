@@ -16,7 +16,7 @@ target_include_directories(nvml_plugin PUBLIC include)
 
 target_compile_features(nvml_plugin PUBLIC cxx_std_14)
 
-target_link_libraries(nvml_plugin PUBLIC Scorep::scorep-plugin-cxx libnvidia-ml)
+target_link_libraries(nvml_plugin PUBLIC Scorep::scorep-plugin-cxx nvidia-ml)
 
 install(
     TARGETS nvml_plugin
