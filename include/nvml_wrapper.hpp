@@ -61,7 +61,8 @@ nvml_metric metricname_2_nvmlfunction(std::string metric_name)
     }
     else if (metric_name.compare("total_energy_consumption") == 0) {
         metric = TOTAL_ENERGY_CONSUMPTION;
-        std::runtime_error("nvmlDeviceGetTotalEnergyConsumption is not supported yet");
+        std::runtime_error(
+            "nvmlDeviceGetTotalEnergyConsumption is not supported yet");
     }
     else {
         std::runtime_error("Unknown metric: " + metric_name);
@@ -73,64 +74,69 @@ nvml_metric metricname_2_nvmlfunction(std::string metric_name)
 unsigned int get_value(nvml_metric metric, nvmlDevice_t& device)
 {
     unsigned int value;
+    nvmlMemory_t mem;
+    nvmlUtilization_t util;
     nvmlReturn_t ret;
-    if (metric == CLOCK_MEM) {
+
+    switch (metric) {
+    case CLOCK_MEM:
         ret = nvmlDeviceGetClockInfo(device, nvmlClockType_t::NVML_CLOCK_MEM, &value);
-    }
-    else if (metric == CLOCK_SM) {
+        break;
+    case CLOCK_SM:
         ret = nvmlDeviceGetClockInfo(device, nvmlClockType_t::NVML_CLOCK_SM, &value);
-    }
-    else if (metric == FAN_SPEED) {
+        break;
+        break;
+    case FAN_SPEED:
         ret = nvmlDeviceGetFanSpeed(device, &value);
-    }
-    else if (metric == MEMORY_FREE) {
-        nvmlMemory_t mem;
+        break;
+    case MEMORY_FREE:
         ret = nvmlDeviceGetMemoryInfo(device, &mem);
         value = mem.free;
-    }
-    else if (metric == MEMORY_USED) {
-        nvmlMemory_t mem;
+        break;
+    case MEMORY_USED:
         ret = nvmlDeviceGetMemoryInfo(device, &mem);
         value = mem.used;
-    }
-    else if (metric == MEMORY_TOTAL) {
-        nvmlMemory_t mem;
+        break;
+    case MEMORY_TOTAL:
         ret = nvmlDeviceGetMemoryInfo(device, &mem);
         value = mem.total;
-    }
-    else if (metric == PCIE_SEND) {
+        break;
+    case PCIE_SEND:
         ret = nvmlDeviceGetPcieThroughput(
             device, nvmlPcieUtilCounter_t::NVML_PCIE_UTIL_TX_BYTES, &value);
-    }
-    else if (metric == PCIE_RECV) {
+        break;
+    case PCIE_RECV:
         ret = nvmlDeviceGetPcieThroughput(
             device, nvmlPcieUtilCounter_t::NVML_PCIE_UTIL_RX_BYTES, &value);
-    }
-    else if (metric == POWER_USAGE) {
+        break;
+    case POWER_USAGE:
         ret = nvmlDeviceGetPowerUsage(device, &value);
-    }
-    else if (metric == TEMPERATURE) {
+        break;
+    case TEMPERATURE:
         ret = nvmlDeviceGetTemperature(
             device, nvmlTemperatureSensors_t::NVML_TEMPERATURE_GPU, &value);
-    }
-    else if (metric == UTILIZATION_GPU) {
-        nvmlUtilization_t util;
+        break;
+    case UTILIZATION_GPU:
         ret = nvmlDeviceGetUtilizationRates(device, &util);
         value = util.gpu;
-    }
-    else if (metric == UTILIZATION_MEM) {
-        nvmlUtilization_t util;
+        break;
+    case UTILIZATION_MEM:
         ret = nvmlDeviceGetUtilizationRates(device, &util);
         value = util.memory;
-    }
-    else if (metric == TOTAL_ENERGY_CONSUMPTION) {
-        std::runtime_error("nvmlDeviceGetTotalEnergyConsumption is not supported yet");
-        //ret = nvmlDeviceGetTotalEnergyConsumption(device, &value);
+        break;
+    case TOTAL_ENERGY_CONSUMPTION:
+        std::runtime_error(
+            "nvmlDeviceGetTotalEnergyConsumption is not supported yet");
+        // ret = nvmlDeviceGetTotalEnergyConsumption(device, &value);
+    default:
+        std::runtime_error(
+            "unknown NVML metric.");
     }
 
     if (NVML_SUCCESS != ret) {
-        throw std::runtime_error("Could not fetch data from NVML. Error Code: " +
-                                 std::string(nvmlErrorString(ret)));
+        throw std::runtime_error(
+            "Could not fetch data from NVML. Error Code: " +
+            std::string(nvmlErrorString(ret)));
     }
 
     return value;
