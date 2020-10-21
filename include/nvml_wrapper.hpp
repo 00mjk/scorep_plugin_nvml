@@ -32,13 +32,13 @@ nvml_metric metricname_2_nvmlfunction(std::string metric_name)
     else if (metric_name.compare("fanspeed") == 0) {
         metric = FAN_SPEED;
     }
-    else if (metric_name.compare("memory_free") == 0) {
+    else if (metric_name.compare("mem_free") == 0) {
         metric = MEMORY_FREE;
     }
-    else if (metric_name.compare("memory_used") == 0) {
+    else if (metric_name.compare("mem_used") == 0) {
         metric = MEMORY_USED;
     }
-    else if (metric_name.compare("memory_total") == 0) {
+    else if (metric_name.compare("mem_total") == 0) {
         MEMORY_TOTAL;
     }
     else if (metric_name.compare("pcie_send") == 0) {
