@@ -4,140 +4,311 @@
 #include <stdexcept>
 #include <string>
 
-enum nvml_metric {
-    CLOCK_MEM,
-    CLOCK_SM,
-    FAN_SPEED,
-    MEMORY_FREE,
-    MEMORY_USED,
-    MEMORY_TOTAL,
-    PCIE_SEND,
-    PCIE_RECV,
-    POWER_USAGE,
-    TEMPERATURE,
-    UTILIZATION_GPU,
-    UTILIZATION_MEM,
-    TOTAL_ENERGY_CONSUMPTION
+enum metric_measure_type { ABS, REL, ACCU };
+
+enum metric_datatype { INT, UINT, DOUBLE };
+
+class Nvml_Metric {
+public:
+    virtual unsigned int get_value(nvmlDevice_t& device) = 0;
+
+    const std::string& getDesc() const
+    {
+        return desc;
+    }
+
+    const std::string& getUnit() const
+    {
+        return unit;
+    }
+
+    const metric_measure_type getMeasureType() const
+    {
+        return type;
+    }
+
+    const metric_datatype getDatatype() const
+    {
+        return datatype;
+    }
+
+protected:
+    const std::string desc;
+    const std::string unit;
+    metric_measure_type type;
+    metric_datatype datatype;
+
+protected:
+    unsigned int value;
+
+protected:
+    void check_nvml_ret(nvmlReturn_t ret)
+    {
+        if (NVML_SUCCESS != ret) {
+            throw std::runtime_error(
+                "Could not fetch data from NVML. Error Code: " +
+                std::string(nvmlErrorString(ret)));
+        }
+    }
 };
 
-nvml_metric metricname_2_nvmlfunction(std::string metric_name)
+class Power : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlReturn_t ret = nvmlDeviceGetPowerUsage(device, &value);
+        check_nvml_ret(ret);
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "Power Consumption";
+    const std::string unit = "mW";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Temperature : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlReturn_t ret = nvmlDeviceGetTemperature(
+            device, nvmlTemperatureSensors_t::NVML_TEMPERATURE_GPU, &value);
+        check_nvml_ret(ret);
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "Board Temperature";
+    const std::string unit = "°C";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Clock_Sm : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlReturn_t ret =
+            nvmlDeviceGetClockInfo(device, nvmlClockType_t::NVML_CLOCK_SM, &value);
+        check_nvml_ret(ret);
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "SM clocks";
+    const std::string unit = "MHz";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Clock_Mem : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlReturn_t ret =
+            nvmlDeviceGetClockInfo(device, nvmlClockType_t::NVML_CLOCK_MEM, &value);
+        check_nvml_ret(ret);
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "Memory clocks";
+    const std::string unit = "MHz";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Fan_Speed : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlReturn_t ret = nvmlDeviceGetFanSpeed(device, &value);
+        check_nvml_ret(ret);
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "Fan speed";
+    const std::string unit = "";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Mem_Free : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlMemory_t mem;
+        nvmlReturn_t ret = nvmlDeviceGetMemoryInfo(device, &mem);
+        check_nvml_ret(ret);
+        value = mem.free;
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "Free memory";
+    const std::string unit = "Bytes";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Mem_Used : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlMemory_t mem;
+        nvmlReturn_t ret = nvmlDeviceGetMemoryInfo(device, &mem);
+        check_nvml_ret(ret);
+        value = mem.used;
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "Used memory";
+    const std::string unit = "Bytes";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Mem_Total : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlMemory_t mem;
+        nvmlReturn_t ret = nvmlDeviceGetMemoryInfo(device, &mem);
+        check_nvml_ret(ret);
+        value = mem.total;
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "Total memory";
+    const std::string unit = "Bytes";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Pcie_Send : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlReturn_t ret = nvmlDeviceGetPcieThroughput(
+            device, nvmlPcieUtilCounter_t::NVML_PCIE_UTIL_TX_BYTES, &value);
+        check_nvml_ret(ret);
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "PCIe Send";
+    const std::string unit = "Bytes";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Pcie_Recv : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlReturn_t ret = nvmlDeviceGetPcieThroughput(
+            device, nvmlPcieUtilCounter_t::NVML_PCIE_UTIL_RX_BYTES, &value);
+        check_nvml_ret(ret);
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "PCIe Recv";
+    const std::string unit = "Bytes";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Utilization_Gpu : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlUtilization_t util;
+        nvmlReturn_t ret = nvmlDeviceGetUtilizationRates(device, &util);
+        check_nvml_ret(ret);
+        value = util.gpu;
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "GPU Utilization";
+    const std::string unit = "";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+class Utilization_Mem : public Nvml_Metric {
+public:
+    unsigned int get_value(nvmlDevice_t& device)
+    {
+        nvmlUtilization_t util;
+        nvmlReturn_t ret = nvmlDeviceGetUtilizationRates(device, &util);
+        check_nvml_ret(ret);
+        value = util.memory;
+
+        return value;
+    }
+
+protected:
+    const std::string desc = "Memory Utilization";
+    const std::string unit = "";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+};
+
+Nvml_Metric* metricname_2_nvmlfunction(std::string metric_name)
 {
-    nvml_metric metric;
-    if (metric_name.compare("clock_mem") == 0) {
-        metric = CLOCK_MEM;
-    }
-    else if (metric_name.compare("clock_sm") == 0) {
-        metric = CLOCK_SM;
-    }
-    else if (metric_name.compare("fanspeed") == 0) {
-        metric = FAN_SPEED;
-    }
-    else if (metric_name.compare("mem_free") == 0) {
-        metric = MEMORY_FREE;
-    }
-    else if (metric_name.compare("mem_used") == 0) {
-        metric = MEMORY_USED;
-    }
-    else if (metric_name.compare("mem_total") == 0) {
-        MEMORY_TOTAL;
-    }
-    else if (metric_name.compare("pcie_send") == 0) {
-        metric = PCIE_SEND;
-    }
-    else if (metric_name.compare("pcie_recv") == 0) {
-        metric = PCIE_RECV;
-    }
-    else if (metric_name.compare("power_usage") == 0) {
-        metric = POWER_USAGE;
+    Nvml_Metric* metric;
+    if (metric_name.compare("power_usage") == 0) {
+        metric = new Power();
     }
     else if (metric_name.compare("temperature") == 0) {
-        metric = TEMPERATURE;
+        metric = new Temperature();
+    }
+    else if (metric_name.compare("clock_sm") == 0) {
+        metric = new Clock_Sm();
+    }
+    else if (metric_name.compare("clock_mem") == 0) {
+        metric = new Clock_Mem();
+    }
+    else if (metric_name.compare("fan_speed") == 0) {
+        metric = new Fan_Speed();
+    }
+    else if (metric_name.compare("mem_free") == 0) {
+        metric = new Mem_Free();
+    }
+    else if (metric_name.compare("mem_used") == 0) {
+        metric = new Mem_Used();
+    }
+    else if (metric_name.compare("pcie_send") == 0) {
+        metric = new Pcie_Send();
+    }
+    else if (metric_name.compare("pcie_recv") == 0) {
+        metric = new Pcie_Recv();
     }
     else if (metric_name.compare("utilization_gpu") == 0) {
-        metric = UTILIZATION_GPU;
+        metric = new Utilization_Gpu();
     }
-    else if (metric_name.compare("utilization_memory") == 0) {
-        metric = UTILIZATION_MEM;
-    }
-    else if (metric_name.compare("total_energy_consumption") == 0) {
-        metric = TOTAL_ENERGY_CONSUMPTION;
-        std::runtime_error(
-            "nvmlDeviceGetTotalEnergyConsumption is not supported yet");
+    else if (metric_name.compare("utilization_mem") == 0) {
+        metric = new Utilization_Mem();
     }
     else {
         std::runtime_error("Unknown metric: " + metric_name);
     }
-
     return metric;
-}
-
-unsigned int get_value(nvml_metric metric, nvmlDevice_t& device)
-{
-    unsigned int value;
-    nvmlMemory_t mem;
-    nvmlUtilization_t util;
-    nvmlReturn_t ret;
-
-    switch (metric) {
-    case CLOCK_MEM:
-        ret = nvmlDeviceGetClockInfo(device, nvmlClockType_t::NVML_CLOCK_MEM, &value);
-        break;
-    case CLOCK_SM:
-        ret = nvmlDeviceGetClockInfo(device, nvmlClockType_t::NVML_CLOCK_SM, &value);
-        break;
-        break;
-    case FAN_SPEED:
-        ret = nvmlDeviceGetFanSpeed(device, &value);
-        break;
-    case MEMORY_FREE:
-        ret = nvmlDeviceGetMemoryInfo(device, &mem);
-        value = mem.free;
-        break;
-    case MEMORY_USED:
-        ret = nvmlDeviceGetMemoryInfo(device, &mem);
-        value = mem.used;
-        break;
-    case MEMORY_TOTAL:
-        ret = nvmlDeviceGetMemoryInfo(device, &mem);
-        value = mem.total;
-        break;
-    case PCIE_SEND:
-        ret = nvmlDeviceGetPcieThroughput(
-            device, nvmlPcieUtilCounter_t::NVML_PCIE_UTIL_TX_BYTES, &value);
-        break;
-    case PCIE_RECV:
-        ret = nvmlDeviceGetPcieThroughput(
-            device, nvmlPcieUtilCounter_t::NVML_PCIE_UTIL_RX_BYTES, &value);
-        break;
-    case POWER_USAGE:
-        ret = nvmlDeviceGetPowerUsage(device, &value);
-        break;
-    case TEMPERATURE:
-        ret = nvmlDeviceGetTemperature(
-            device, nvmlTemperatureSensors_t::NVML_TEMPERATURE_GPU, &value);
-        break;
-    case UTILIZATION_GPU:
-        ret = nvmlDeviceGetUtilizationRates(device, &util);
-        value = util.gpu;
-        break;
-    case UTILIZATION_MEM:
-        ret = nvmlDeviceGetUtilizationRates(device, &util);
-        value = util.memory;
-        break;
-    case TOTAL_ENERGY_CONSUMPTION:
-        std::runtime_error(
-            "nvmlDeviceGetTotalEnergyConsumption is not supported yet");
-        // ret = nvmlDeviceGetTotalEnergyConsumption(device, &value);
-    default:
-        std::runtime_error(
-            "unknown NVML metric.");
-    }
-
-    if (NVML_SUCCESS != ret) {
-        throw std::runtime_error(
-            "Could not fetch data from NVML. Error Code: " +
-            std::string(nvmlErrorString(ret)));
-    }
-
-    return value;
 }

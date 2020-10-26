@@ -5,6 +5,7 @@
 #include <nvml.h>
 
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -14,13 +15,17 @@ using namespace scorep::plugin::policy;
 using scorep::plugin::logging;
 
 struct nvml_t {
-    nvml_t(const std::string& name_, unsigned int device_id_, nvml_metric metric_)
+    nvml_t(const std::string& name_, unsigned int device_id_, Nvml_Metric* metric_)
         : name(name_), device_id(device_id_), metric(metric_)
     {
     }
+    ~nvml_t()
+    {
+        logging::info() << "call destructor of " << name;
+    }
     std::string name;
     unsigned int device_id;
-    nvml_metric metric;
+    Nvml_Metric* metric;
 };
 
 template <typename T, typename Policies>
@@ -43,9 +48,10 @@ public:
     {
         nvmlReturn_t nvml = nvmlShutdown();
         if (NVML_SUCCESS != nvml) {
-//            throw std::runtime_error("Could not terminate NVML. Code: " +
-//                                     std::string(nvmlErrorString(nvml)));
-            logging::warn() << "Could not terminate NVML. Code:" << std::string(nvmlErrorString(nvml));
+            //            throw std::runtime_error("Could not terminate NVML. Code: " +
+            //                                     std::string(nvmlErrorString(nvml)));
+            logging::warn() << "Could not terminate NVML. Code:"
+                            << std::string(nvmlErrorString(nvml));
         }
     }
 
@@ -57,18 +63,48 @@ public:
 
         logging::info() << "get metric properties called with: " << metric_name;
 
-        nvml_metric metric_type = metricname_2_nvmlfunction(metric_name);
+        Nvml_Metric* metric_type = metricname_2_nvmlfunction(metric_name);
 
         for (unsigned int i = 0; i < nvml_devices.size(); ++i) {
-
             /* TODO use device index by nvmlDeviceGetIndex( nvmlDevice_t device, unsigned int* index ) */
 
             std::string new_name = metric_name + " on CUDA: " + std::to_string(i);
             auto handle = make_handle(new_name, nvml_t{metric_name, i, metric_type});
-            properties.push_back(scorep::plugin::metric_property(
-                new_name, "", "")
-                                     .absolute_point()
-                                     .value_uint());
+
+            scorep::plugin::metric_property property = scorep::plugin::metric_property(
+                new_name, metric_type->getDesc(), metric_type->getUnit());
+
+            metric_datatype datatype = metric_type->getDatatype();
+            switch (datatype) {
+            case metric_datatype::UINT:
+                property.value_uint();
+                break;
+            case metric_datatype::INT:
+                property.value_int();
+                break;
+            case metric_datatype::DOUBLE:
+                property.value_double();
+                break;
+            default:
+                throw std::runtime_error("Unknown datatype for metric " + metric_name);
+            }
+
+            metric_measure_type measure_type = metric_type->getMeasureType();
+            switch (measure_type) {
+            case metric_measure_type::ABS:
+                property.absolute_point();
+                break;
+            case metric_measure_type::REL:
+                property.relative_point();
+                break;
+            case metric_measure_type::ACCU:
+                property.accumulated_point();
+                break;
+            default:
+                throw std::runtime_error("Unknown measure type for metric " + metric_name);
+            }
+
+            properties.push_back(property);
         }
         return properties;
     }
@@ -104,7 +140,7 @@ public:
         logging::info() << "get_all_values called with: " << handle.name
                         << " CUDA " << handle.device_id;
 
-        std::uint64_t data = get_value(handle.metric, nvml_devices[handle.device_id]);
+        std::uint64_t data = handle.metric->get_value(nvml_devices[handle.device_id]);
         cursor.write(end, data);
     }
 
