@@ -17,7 +17,7 @@ Set Paths
 ## Usage
 
 ## Environment Variables
-
+INTERVAL = Interval in milliseconds
 ## Developer note 
 Current `nvml.h` can be found under 
 https://github.com/NVIDIA/nvidia-settings/blob/master/src/nvml.h

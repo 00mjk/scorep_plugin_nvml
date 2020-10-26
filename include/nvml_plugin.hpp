@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
+#include <chrono>
 
 using namespace scorep::plugin::policy;
 
@@ -32,7 +32,7 @@ template <typename T, typename Policies>
 using nvml_object_id = scorep::plugin::policy::object_id<nvml_t, T, Policies>;
 
 class nvml_plugin
-    : public scorep::plugin::base<nvml_plugin, async, per_host, scorep_clock, nvml_object_id> {
+    : public scorep::plugin::base<nvml_plugin, async, per_host, scorep_clock, frequent, nvml_object_id> {
 public:
     nvml_plugin()
     {
@@ -109,6 +109,13 @@ public:
         return properties;
     }
 
+    static uint64_t get_metric_gather_interval()
+    {
+        logging::info() << "get_metric_gather_interval called";
+        unsigned long interval = std::stoul(scorep::environment_variable::get("INTERVAL", "50"));
+        return interval * 1000 / CLOCKS_PER_SEC;
+    }
+
     void add_metric(nvml_t& handle)
     {
         logging::info() << "add metric called with: " << handle.name
@@ -126,10 +133,11 @@ public:
     {
         end = scorep::chrono::measurement_clock::now();
 
-//        for (auto& handle : get_handles())
-//        {
-//            handle.data = get_value(handle.metric, nvml_devices[handle.device_id]);
-//        }
+        //        for (auto& handle : get_handles())
+        //        {
+        //            handle.data = get_value(handle.metric, nvml_devices[handle.device_id]);
+        //        }
+        logging::info() << "stopp called";
     }
 
     // Will be called post mortem by the measurement environment
