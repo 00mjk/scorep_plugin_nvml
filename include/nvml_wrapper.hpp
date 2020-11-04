@@ -271,7 +271,7 @@ protected:
     const metric_datatype datatype = metric_datatype::UINT;
 };
 
-Nvml_Metric* metricname_2_nvmlfunction(std::string metric_name)
+Nvml_Metric* metric_name_2_nvml_function(std::string metric_name)
 {
     Nvml_Metric* metric;
     if (metric_name.compare("power_usage") == 0) {

@@ -63,7 +63,7 @@ public:
 
         logging::info() << "get metric properties called with: " << metric_name;
 
-        Nvml_Metric* metric_type = metricname_2_nvmlfunction(metric_name);
+        Nvml_Metric* metric_type = metric_name_2_nvml_function(metric_name);
 
         for (unsigned int i = 0; i < nvml_devices.size(); ++i) {
             /* TODO use device index by nvmlDeviceGetIndex( nvmlDevice_t device, unsigned int* index ) */
