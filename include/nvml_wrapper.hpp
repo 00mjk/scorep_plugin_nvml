@@ -457,3 +457,27 @@ Nvml_Metric* metricname_2_nvmlfunction(std::string metric_name)
     }
     return metric;
 }
+
+Nvml_Sampling_Metric* metric_name_2_nvml_sampling_function(std::string metric_name)
+{
+    Nvml_Sampling_Metric* metric;
+    if (metric_name.compare("power_usage") == 0) {
+        metric = new Power_Sampling();
+    }
+    else if (metric_name.compare("clock_sm") == 0) {
+        metric = new Clock_Sm_Sampling();
+    }
+    else if (metric_name.compare("clock_mem") == 0) {
+        metric = new Clock_Mem_Sampling();
+    }
+    else if (metric_name.compare("utilization_gpu") == 0) {
+        metric = new Utilization_Gpu_Sampling();
+    }
+    else if (metric_name.compare("utilization_mem") == 0) {
+        metric = new Utilization_Mem_Sampling();
+    }
+    else {
+        std::runtime_error("Unknown metric: " + metric_name);
+    }
+    return metric;
+}
