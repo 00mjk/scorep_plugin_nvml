@@ -16,7 +16,7 @@ using namespace scorep::plugin::policy;
 using scorep::plugin::logging;
 
 struct nvml_t {
-    nvml_t(const std::string& name_, unsigned int device_id_, Sampling_Metric* metric_)
+    nvml_t(const std::string& name_, unsigned int device_id_, Nvml_Sampling_Metric* metric_)
         : name(name_), device_id(device_id_), metric(metric_)
     {
     }
@@ -26,14 +26,14 @@ struct nvml_t {
     }
     std::string name;
     unsigned int device_id;
-    Sampling_Metric* metric;
+    Nvml_Sampling_Metric* metric;
 };
 
 template <typename T, typename Policies>
 using nvml_object_id = scorep::plugin::policy::object_id<nvml_t, T, Policies>;
 
 class nvml_sampling_plugin
-    : public scorep::plugin::base<nvml_plugin, async, per_host, scorep_clock, frequent, nvml_object_id> {
+    : public scorep::plugin::base<nvml_sampling_plugin, async, per_host, scorep_clock, frequent, nvml_object_id> {
 public:
     nvml_sampling_plugin()
     {
@@ -156,7 +156,10 @@ public:
         for (auto pair : data)
         {
             //const auto time = chrono::system
-            cursor.write(convert.to_ticks(pair.first), pair.second);
+            scorep::chrono::ticks ticks = scorep::chrono::ticks(pair.first);
+//            scorep::chrono::ticks timestamp = convert.to_ticks(ticks); // TODO convert timestamp
+            cursor.write(ticks,  (std::uint64_t) pair.second);
+            //  cursor.write(convert.to_ticks(pair.first), pair.second);
         }
     }
 
