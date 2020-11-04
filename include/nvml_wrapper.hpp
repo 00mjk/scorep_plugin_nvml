@@ -3,10 +3,14 @@
 #include "nvml.h"
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 enum metric_measure_type { ABS, REL, ACCU };
 
 enum metric_datatype { INT, UINT, DOUBLE };
+
+using  pair_time_sampling_t = std::pair<unsigned long long, unsigned int>;
+
 
 class Nvml_Metric {
 public:
@@ -270,6 +274,147 @@ protected:
     const metric_measure_type type = metric_measure_type::ABS;
     const metric_datatype datatype = metric_datatype::UINT;
 };
+
+class Nvml_Sampling_Metric {
+public:
+    std::vector<pair_time_sampling_t> get_value(nvmlDevice_t& device, unsigned long long last_seen = 0)
+    {
+        nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_GPU_UTILIZATION_SAMPLES;
+        nvmlValueType_t val_type;
+        unsigned int sample_count;
+        nvmlSample_t* samples;
+
+        std::vector<pair_time_sampling_t> vec;
+        nvmlReturn_t ret;
+
+        // get number of samples to allocate memory
+        ret = nvmlDeviceGetSamples(device, sample_type, last_seen,
+                                   &val_type, &sample_count, NULL);
+        check_nvml_ret(ret);
+        vec.reserve(sample_count);
+
+        // get samples
+        samples = (nvmlSample_t*)malloc(sample_count * sizeof(nvmlSample_t));
+        ret = nvmlDeviceGetSamples(
+            device, sample_type, last_seen, &val_type, &sample_count, samples);
+
+        if (NVML_SUCCESS != ret) {
+            free(samples);
+            throw std::runtime_error(
+                "Could not fetch data from NVML. Error Code: " +
+                std::string(nvmlErrorString(ret)));
+        }
+
+        for (unsigned int i = 0; i < sample_count; ++i) {
+            vec.emplace_back(samples[i].timeStamp, samples[i].sampleValue.uiVal);
+        }
+
+        return vec;
+    }
+
+    const std::string& getDesc() const
+    {
+        return desc;
+    }
+
+    const std::string& getUnit() const
+    {
+        return unit;
+    }
+
+    const metric_measure_type getMeasureType() const
+    {
+        return type;
+    }
+
+    const metric_datatype getDatatype() const
+    {
+        return datatype;
+    }
+
+protected:
+    const std::string desc;
+    const std::string unit;
+    metric_measure_type type;
+    metric_datatype datatype;
+
+protected:
+    void check_nvml_ret(nvmlReturn_t ret)
+    {
+        if (NVML_SUCCESS != ret) {
+            throw std::runtime_error(
+                "Could not fetch data from NVML. Error Code: " +
+                std::string(nvmlErrorString(ret)));
+        }
+    }
+};
+
+
+class Power_Sampling : public Nvml_Sampling_Metric {
+
+protected:
+    const std::string desc = "Power consumption (samples)";
+    const std::string unit = "mW";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+
+protected:
+    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_TOTAL_POWER_SAMPLES;
+};
+
+
+class Utilization_Gpu_Sampling : public Nvml_Sampling_Metric {
+
+protected:
+    const std::string desc = "GPU utilization (samples)";
+    const std::string unit = "";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+
+protected:
+    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_GPU_UTILIZATION_SAMPLES;
+};
+
+
+class Utilization_Mem_Sampling : public Nvml_Sampling_Metric {
+
+protected:
+    const std::string desc = "Memory utilization (samples)";
+    const std::string unit = "";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+
+protected:
+    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_MEMORY_CLK_SAMPLES;
+};
+
+
+class Clock_Sm_Sampling : public Nvml_Sampling_Metric {
+
+protected:
+    const std::string desc = "SM clocks (sample)";
+    const std::string unit = "MHz";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+
+protected:
+    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_PROCESSOR_CLK_SAMPLES;
+
+};
+
+class Clock_Mem_Sampling : public Nvml_Sampling_Metric {
+
+protected:
+    const std::string desc = "Memory clocks (sample)";
+    const std::string unit = "MHz";
+    const metric_measure_type type = metric_measure_type::ABS;
+    const metric_datatype datatype = metric_datatype::UINT;
+
+protected:
+    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_MEMORY_CLK_SAMPLES;
+
+};
+
 
 Nvml_Metric* metricname_2_nvmlfunction(std::string metric_name)
 {
