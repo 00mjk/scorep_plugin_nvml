@@ -1,6 +1,8 @@
+#ifndef SCOREP_PLUGIN_NVML_NVML_WRAPPER_HPP
+#define SCOREP_PLUGIN_NVML_NVML_WRAPPER_HPP
+
 #include <nvml.h>
 
-#include "nvml.h"
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -9,8 +11,16 @@ enum metric_measure_type { ABS, REL, ACCU };
 
 enum metric_datatype { INT, UINT, DOUBLE };
 
-using  pair_time_sampling_t = std::pair<unsigned long long, unsigned int>;
+using pair_time_sampling_t = std::pair<unsigned long long, std::uint64_t>;
 
+inline static void check_nvml_ret(nvmlReturn_t ret)
+{
+    if (NVML_SUCCESS != ret) {
+        throw std::runtime_error(
+            "Could not fetch data from NVML. Error Code: " +
+            std::string(nvmlErrorString(ret)));
+    }
+}
 
 class Nvml_Metric {
 public:
@@ -44,16 +54,6 @@ protected:
 
 protected:
     unsigned int value;
-
-protected:
-    void check_nvml_ret(nvmlReturn_t ret)
-    {
-        if (NVML_SUCCESS != ret) {
-            throw std::runtime_error(
-                "Could not fetch data from NVML. Error Code: " +
-                std::string(nvmlErrorString(ret)));
-        }
-    }
 };
 
 class Power : public Nvml_Metric {
@@ -277,7 +277,8 @@ protected:
 
 class Nvml_Sampling_Metric {
 public:
-    std::vector<pair_time_sampling_t> get_value(nvmlDevice_t& device, unsigned long long last_seen = 0)
+    std::vector<pair_time_sampling_t> get_value(nvmlDevice_t device,
+                                                unsigned long long last_seen = 0)
     {
         nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_GPU_UTILIZATION_SAMPLES;
         nvmlValueType_t val_type;
@@ -287,16 +288,22 @@ public:
         std::vector<pair_time_sampling_t> vec;
         nvmlReturn_t ret;
 
+        if (device == NULL) {
+            throw std::runtime_error(
+                "CUDA device for metric sampling not set.");
+        }
+
         // get number of samples to allocate memory
-        ret = nvmlDeviceGetSamples(device, sample_type, last_seen,
-                                   &val_type, &sample_count, NULL);
+        ret = nvmlDeviceGetSamples(device, sample_type, last_seen, &val_type,
+                                   &sample_count, NULL);
         check_nvml_ret(ret);
         vec.reserve(sample_count);
 
         // get samples
+        // TODO reuse buffer
         samples = (nvmlSample_t*)malloc(sample_count * sizeof(nvmlSample_t));
-        ret = nvmlDeviceGetSamples(
-            device, sample_type, last_seen, &val_type, &sample_count, samples);
+        ret = nvmlDeviceGetSamples(device, sample_type, last_seen, &val_type,
+                                   &sample_count, samples);
 
         if (NVML_SUCCESS != ret) {
             free(samples);
@@ -309,25 +316,27 @@ public:
             vec.emplace_back(samples[i].timeStamp, samples[i].sampleValue.uiVal);
         }
 
+        free(samples);
+
         return vec;
     }
 
-    const std::string& getDesc() const
+    const std::string& get_desc() const
     {
         return desc;
     }
 
-    const std::string& getUnit() const
+    const std::string& get_unit() const
     {
         return unit;
     }
 
-    const metric_measure_type getMeasureType() const
+    const metric_measure_type get_measure_type() const
     {
         return type;
     }
 
-    const metric_datatype getDatatype() const
+    const metric_datatype get_datatype() const
     {
         return datatype;
     }
@@ -337,21 +346,9 @@ protected:
     const std::string unit;
     metric_measure_type type;
     metric_datatype datatype;
-
-protected:
-    void check_nvml_ret(nvmlReturn_t ret)
-    {
-        if (NVML_SUCCESS != ret) {
-            throw std::runtime_error(
-                "Could not fetch data from NVML. Error Code: " +
-                std::string(nvmlErrorString(ret)));
-        }
-    }
 };
 
-
 class Power_Sampling : public Nvml_Sampling_Metric {
-
 protected:
     const std::string desc = "Power consumption (samples)";
     const std::string unit = "mW";
@@ -362,9 +359,7 @@ protected:
     nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_TOTAL_POWER_SAMPLES;
 };
 
-
 class Utilization_Gpu_Sampling : public Nvml_Sampling_Metric {
-
 protected:
     const std::string desc = "GPU utilization (samples)";
     const std::string unit = "";
@@ -375,9 +370,7 @@ protected:
     nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_GPU_UTILIZATION_SAMPLES;
 };
 
-
 class Utilization_Mem_Sampling : public Nvml_Sampling_Metric {
-
 protected:
     const std::string desc = "Memory utilization (samples)";
     const std::string unit = "";
@@ -388,9 +381,7 @@ protected:
     nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_MEMORY_CLK_SAMPLES;
 };
 
-
 class Clock_Sm_Sampling : public Nvml_Sampling_Metric {
-
 protected:
     const std::string desc = "SM clocks (sample)";
     const std::string unit = "MHz";
@@ -399,11 +390,9 @@ protected:
 
 protected:
     nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_PROCESSOR_CLK_SAMPLES;
-
 };
 
 class Clock_Mem_Sampling : public Nvml_Sampling_Metric {
-
 protected:
     const std::string desc = "Memory clocks (sample)";
     const std::string unit = "MHz";
@@ -412,9 +401,7 @@ protected:
 
 protected:
     nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_MEMORY_CLK_SAMPLES;
-
 };
-
 
 Nvml_Metric* metricname_2_nvmlfunction(std::string metric_name)
 {
@@ -481,3 +468,5 @@ Nvml_Sampling_Metric* metric_name_2_nvml_sampling_function(std::string metric_na
     }
     return metric;
 }
+
+#endif // SCOREP_PLUGIN_NVML_NVML_WRAPPER_HPP

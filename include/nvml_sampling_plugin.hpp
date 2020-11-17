@@ -1,48 +1,37 @@
-#include "../lib/scorep_plugin_cxx_wrapper/include/scorep/chrono/time_convert.hpp"
+#include "nvml_measurement_thread.hpp"
+#include "nvml_types.hpp"
 #include "nvml_wrapper.hpp"
 
+#include <scorep/chrono/chrono.hpp>
 #include <scorep/plugin/plugin.hpp>
 
 #include <nvml.h>
 
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <chrono>
 
 using namespace scorep::plugin::policy;
 
 using scorep::plugin::logging;
 
-struct nvml_t {
-    nvml_t(const std::string& name_, unsigned int device_id_, Nvml_Sampling_Metric* metric_)
-        : name(name_), device_id(device_id_), metric(metric_)
-    {
-    }
-    ~nvml_t()
-    {
-        logging::info() << "call destructor of " << name;
-    }
-    std::string name;
-    unsigned int device_id;
-    Nvml_Sampling_Metric* metric;
-};
-
 template <typename T, typename Policies>
 using nvml_object_id = scorep::plugin::policy::object_id<nvml_t, T, Policies>;
 
 class nvml_sampling_plugin
-    : public scorep::plugin::base<nvml_sampling_plugin, async, per_host, scorep_clock, frequent, nvml_object_id> {
+    : public scorep::plugin::base<nvml_sampling_plugin, async, per_host, scorep_clock, post_mortem, nvml_object_id> {
 public:
     nvml_sampling_plugin()
+        : nvml_m(std::chrono::milliseconds(
+              stoi(scorep::environment_variable::get("interval", "50000"))))
     {
         nvmlReturn_t nvml = nvmlInit_v2();
         if (NVML_SUCCESS != nvml) {
             throw std::runtime_error("Could not start NVML. Code: " +
                                      std::string(nvmlErrorString(nvml)));
         }
-        nvml_devices = get_visible_devices();
     }
 
     ~nvml_sampling_plugin()
@@ -64,18 +53,20 @@ public:
 
         logging::info() << "get metric properties called with: " << metric_name;
 
-        Nvml_Sampling_Metric* metric_type = metric_name_2_nvml_sampling_function(metric_name);
-
+        std::vector<nvmlDevice_t> nvml_devices = get_visible_devices();
         for (unsigned int i = 0; i < nvml_devices.size(); ++i) {
             /* TODO use device index by nvmlDeviceGetIndex( nvmlDevice_t device, unsigned int* index ) */
+            Nvml_Sampling_Metric* metric_type =
+                metric_name_2_nvml_sampling_function(metric_name);
 
             std::string new_name = metric_name + " on CUDA: " + std::to_string(i);
-            auto handle = make_handle(new_name, nvml_t{metric_name, i, metric_type});
+            auto handle = make_handle(
+                new_name, nvml_t{metric_name, nvml_devices[i], metric_type});
 
             scorep::plugin::metric_property property = scorep::plugin::metric_property(
-                new_name, metric_type->getDesc(), metric_type->getUnit());
+                new_name, metric_type->get_desc(), metric_type->get_unit());
 
-            metric_datatype datatype = metric_type->getDatatype();
+            metric_datatype datatype = metric_type->get_datatype();
             switch (datatype) {
             case metric_datatype::UINT:
                 property.value_uint();
@@ -90,7 +81,7 @@ public:
                 throw std::runtime_error("Unknown datatype for metric " + metric_name);
             }
 
-            metric_measure_type measure_type = metric_type->getMeasureType();
+            metric_measure_type measure_type = metric_type->get_measure_type();
             switch (measure_type) {
             case metric_measure_type::ABS:
                 property.absolute_point();
@@ -107,40 +98,43 @@ public:
 
             properties.push_back(property);
         }
-        return properties;
-    }
 
-    static uint64_t get_metric_gather_interval()
-    {
-        logging::info() << "get_metric_gather_interval called";
-        unsigned long interval = std::stoul(scorep::environment_variable::get("INTERVAL", "5"));
-        return interval / CLOCKS_PER_SEC;
+        nvml_m.add_handles(get_handles());
+
+        return properties;
     }
 
     void add_metric(nvml_t& handle)
     {
         logging::info() << "add metric called with: " << handle.name
-                        << " on CUDA " << handle.device_id;
+                        << " on CUDA " << handle.device_idx;
     }
 
     // start your measurement in this method
     void start()
     {
-        begin = scorep::chrono::measurement_clock::now();
-        convert.synchronize_point();
+        nvml_thread =
+            std::thread([this]() { this->nvml_m.measurement_sampling(); });
+
+        logging::info() << "Successfully started NVML measurement.";
+
+        //        convert.synchronize_point();
     }
 
     // stop your measurement in this method
     void stop()
     {
-        end = scorep::chrono::measurement_clock::now();
-        convert.synchronize_point();
+        nvml_m.stop_measurement();
+        if (nvml_thread.joinable()) {
+            nvml_thread.join();
+        }
+        //        convert.synchronize_point();
 
         //        for (auto& handle : get_handles())
         //        {
         //            handle.data = get_value(handle.metric, nvml_devices[handle.device_id]);
         //        }
-        logging::info() << "stopp called";
+        logging::info() << "stop called";
     }
 
     // Will be called post mortem by the measurement environment
@@ -149,24 +143,33 @@ public:
     void get_all_values(nvml_t& handle, C& cursor)
     {
         logging::info() << "get_all_values called with: " << handle.name
-                        << " CUDA " << handle.device_id;
+                        << " CUDA " << handle.device_idx;
 
-        unsigned long long last_seen = begin.count();
-        std::vector<pair_time_sampling_t> data = handle.metric->get_value(nvml_devices[handle.device_id], last_seen);
-        for (auto pair : data)
-        {
-            //const auto time = chrono::system
-            scorep::chrono::ticks ticks = scorep::chrono::ticks(pair.first);
-//            scorep::chrono::ticks timestamp = convert.to_ticks(ticks); // TODO convert timestamp
-            cursor.write(ticks,  (std::uint64_t) pair.second);
-            //  cursor.write(convert.to_ticks(pair.first), pair.second);
+        auto values = nvml_m.get_readings(handle);
+        for (auto& value : values) {
+            cursor.write(value);
         }
+        logging::debug() << "get_all_values wrote " << values.size() << " values (out of which "
+                         << cursor.size() << " are in the valid time range)";
+
+        //        unsigned long long last_seen = begin.count();
+        //        std::vector<pair_time_sampling_t> data = handle.metric->get_value(nvml_devices[handle.device_id], last_seen);
+        //        for (auto pair : data)
+        //        {
+        //            //const auto time = chrono::system
+        //            scorep::chrono::ticks ticks = scorep::chrono::ticks(pair.first);
+        ////            scorep::chrono::ticks timestamp = convert.to_ticks(ticks); // TODO convert timestamp
+        //            cursor.write(ticks,  (std::uint64_t) pair.second);
+        //            //  cursor.write(convert.to_ticks(pair.first), pair.second);
+        //        }
     }
 
 private:
-    std::vector<nvmlDevice_t> nvml_devices;
     scorep::chrono::ticks begin, end;
     scorep::chrono::time_convert<> convert;
+
+    nvml_measurement_thread nvml_m;
+    std::thread nvml_thread;
 
 private:
     std::vector<nvmlDevice_t> get_visible_devices()
