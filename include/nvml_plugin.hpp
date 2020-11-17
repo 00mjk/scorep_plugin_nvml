@@ -1,3 +1,4 @@
+#include "nvml.h"
 #include "nvml_wrapper.hpp"
 
 #include <scorep/plugin/plugin.hpp>
@@ -36,23 +37,16 @@ class nvml_plugin
 public:
     nvml_plugin()
     {
-        nvmlReturn_t nvml = nvmlInit_v2();
-        if (NVML_SUCCESS != nvml) {
-            throw std::runtime_error("Could not start NVML. Code: " +
-                                     std::string(nvmlErrorString(nvml)));
-        }
+        nvmlReturn_t ret = nvmlInit_v2();
+        check_nvml_return(ret);
+
         nvml_devices = get_visible_devices();
     }
 
     ~nvml_plugin()
     {
-        nvmlReturn_t nvml = nvmlShutdown();
-        if (NVML_SUCCESS != nvml) {
-            //            throw std::runtime_error("Could not terminate NVML. Code: " +
-            //                                     std::string(nvmlErrorString(nvml)));
-            logging::warn() << "Could not terminate NVML. Code:"
-                            << std::string(nvmlErrorString(nvml));
-        }
+        nvmlReturn_t ret = nvmlShutdown();
+        check_nvml_return(ret);
     }
 
     // Convert a named metric (may contain wildcards or so) to a vector of
@@ -137,7 +131,7 @@ public:
         //        {
         //            handle.data = get_value(handle.metric, nvml_devices[handle.device_id]);
         //        }
-        logging::info() << "stopp called";
+        logging::info() << "stop called";
     }
 
     // Will be called post mortem by the measurement environment
@@ -155,7 +149,6 @@ public:
 private:
     std::vector<nvmlDevice_t> nvml_devices;
     scorep::chrono::ticks begin, end;
-    int counter = 0;
 
 private:
     std::vector<nvmlDevice_t> get_visible_devices()
@@ -166,9 +159,7 @@ private:
         unsigned int num_devices;
 
         ret = nvmlDeviceGetCount(&num_devices);
-        if (NVML_SUCCESS != ret) {
-            throw std::runtime_error(nvmlErrorString(ret));
-        }
+        check_nvml_return(ret);
 
         /*
          * New nvmlDeviceGetCount_v2 (default in NVML 5.319) returns count of all devices in the system
@@ -190,4 +181,10 @@ private:
         }
         return devices;
     }
+    //    void nvml_check_return(const nvmlReturn_t& ret)
+    //    {
+    //        if (NVML_SUCCESS != ret) {
+    //            throw std::runtime_error(std::string(("NVML error: ")) + nvmlErrorString(ret));
+    //        }
+    //    }
 };

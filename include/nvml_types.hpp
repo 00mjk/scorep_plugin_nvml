@@ -19,7 +19,7 @@ public:
         : name(name_), device(device_), metric(metric_)
     {
         nvmlReturn_t ret = nvmlDeviceGetIndex(device, &device_idx);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
     }
     ~nvml_t()
     {

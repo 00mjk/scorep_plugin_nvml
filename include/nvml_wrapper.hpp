@@ -13,7 +13,7 @@ enum metric_datatype { INT, UINT, DOUBLE };
 
 using pair_time_sampling_t = std::pair<unsigned long long, std::uint64_t>;
 
-inline static void check_nvml_ret(nvmlReturn_t ret)
+inline static void check_nvml_return(nvmlReturn_t ret)
 {
     if (NVML_SUCCESS != ret) {
         throw std::runtime_error(
@@ -61,7 +61,7 @@ public:
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret = nvmlDeviceGetPowerUsage(device, &value);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
 
         return value;
     }
@@ -79,7 +79,7 @@ public:
     {
         nvmlReturn_t ret = nvmlDeviceGetTemperature(
             device, nvmlTemperatureSensors_t::NVML_TEMPERATURE_GPU, &value);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
 
         return value;
     }
@@ -97,7 +97,7 @@ public:
     {
         nvmlReturn_t ret =
             nvmlDeviceGetClockInfo(device, nvmlClockType_t::NVML_CLOCK_SM, &value);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
 
         return value;
     }
@@ -115,7 +115,7 @@ public:
     {
         nvmlReturn_t ret =
             nvmlDeviceGetClockInfo(device, nvmlClockType_t::NVML_CLOCK_MEM, &value);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
 
         return value;
     }
@@ -132,7 +132,7 @@ public:
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret = nvmlDeviceGetFanSpeed(device, &value);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
 
         return value;
     }
@@ -150,7 +150,7 @@ public:
     {
         nvmlMemory_t mem;
         nvmlReturn_t ret = nvmlDeviceGetMemoryInfo(device, &mem);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
         value = mem.free;
 
         return value;
@@ -169,7 +169,7 @@ public:
     {
         nvmlMemory_t mem;
         nvmlReturn_t ret = nvmlDeviceGetMemoryInfo(device, &mem);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
         value = mem.used;
 
         return value;
@@ -188,7 +188,7 @@ public:
     {
         nvmlMemory_t mem;
         nvmlReturn_t ret = nvmlDeviceGetMemoryInfo(device, &mem);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
         value = mem.total;
 
         return value;
@@ -207,7 +207,7 @@ public:
     {
         nvmlReturn_t ret = nvmlDeviceGetPcieThroughput(
             device, nvmlPcieUtilCounter_t::NVML_PCIE_UTIL_TX_BYTES, &value);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
 
         return value;
     }
@@ -225,7 +225,7 @@ public:
     {
         nvmlReturn_t ret = nvmlDeviceGetPcieThroughput(
             device, nvmlPcieUtilCounter_t::NVML_PCIE_UTIL_RX_BYTES, &value);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
 
         return value;
     }
@@ -243,7 +243,7 @@ public:
     {
         nvmlUtilization_t util;
         nvmlReturn_t ret = nvmlDeviceGetUtilizationRates(device, &util);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
         value = util.gpu;
 
         return value;
@@ -262,7 +262,7 @@ public:
     {
         nvmlUtilization_t util;
         nvmlReturn_t ret = nvmlDeviceGetUtilizationRates(device, &util);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
         value = util.memory;
 
         return value;
@@ -296,7 +296,7 @@ public:
         // get number of samples to allocate memory
         ret = nvmlDeviceGetSamples(device, sample_type, last_seen, &val_type,
                                    &sample_count, NULL);
-        check_nvml_ret(ret);
+        check_nvml_return(ret);
         vec.reserve(sample_count);
 
         // get samples
