@@ -27,10 +27,21 @@ target_link_libraries(nvml_sync_plugin PUBLIC Scorep::scorep-plugin-cxx nvidia-m
 target_include_directories(nvml_sync_plugin PUBLIC include)
 
 
+#nvml_sampling_plugin
+add_library(nvml_sampling_plugin MODULE src/nvml_sampling_plugin.cpp)
+target_compile_features(nvml_sampling_plugin PUBLIC cxx_std_14)
+target_link_libraries(nvml_sampling_plugin PUBLIC Scorep::scorep-plugin-cxx nvidia-ml)
+target_include_directories(nvml_sampling_plugin PUBLIC include)
+
+
 install(TARGETS nvml_plugin
         LIBRARY DESTINATION lib
         )
 
 install(TARGETS nvml_sync_plugin
+        LIBRARY DESTINATION lib
+        )
+
+install(TARGETS nvml_sampling_plugin
         LIBRARY DESTINATION lib
         )

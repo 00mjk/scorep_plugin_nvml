@@ -15,6 +15,21 @@ Set Paths
 
 
 ## Usage
+Sampling mode seems to be more efficient than async or sync plugin
+### Sampling
+- `SCOREP_METRIC_PLUGINS=nvml_sampling_plugin`
+- `SCOREP_METRIC_NVML_SAMPLING_PLUGIN="power_usage,temperature"`
+    
+Optional :
+- `SCOREP_METRIC_NVML_SAMPLING_PLUGIN_INTERVAL="5000"` (interval to poll the gpu in milliseconds, default 5000ms, note that this does not effect the interval between two sampling point, which are device specific and differ for different metrics. The maximum stored values on the gpus seems to differ also. Setting `SCOREP_METRIC_NVML_SAMPLING__PLUGIN_INTERVAL` to high will make you loose datapoints.)
+
+#### Available metrics
+- `clock_sm`
+- `clock_mem`
+- `power_usage`
+- `utilization_gpu`
+- `utilization_mem`
+
 
 ### Async
 - `SCOREP_METRIC_PLUGINS=nvml_plugin`
