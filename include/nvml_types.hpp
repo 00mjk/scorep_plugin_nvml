@@ -8,8 +8,10 @@
 #include <scorep/chrono/chrono.hpp>
 #include <scorep/plugin/plugin.hpp>
 
-// using pair_time_sampling_t = std::pair<unsigned long long, std::uint64_t>;
-using pair_chrono_value_t = std::pair<scorep::chrono::ticks, std::uint64_t>;
+using system_clock_t = std::chrono::system_clock;
+using system_time_point_t = std::chrono::time_point<system_clock_t>;
+
+using pair_chrono_value_t = std::pair<system_time_point_t, std::uint64_t>;
 
 using scorep::plugin::logging;
 

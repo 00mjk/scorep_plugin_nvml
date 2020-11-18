@@ -116,25 +116,24 @@ public:
         nvml_thread =
             std::thread([this]() { this->nvml_m.measurement_sampling(); });
 
-        logging::info() << "Successfully started NVML measurement.";
+        time_converter.synchronize_point(
+            nvml_m.get_timepoint(), scorep::chrono::measurement_clock::now());
 
-        //        convert.synchronize_point();
+        logging::info() << "Successfully started NVML measurement.";
     }
 
     // stop your measurement in this method
     void stop()
     {
+        time_converter.synchronize_point(
+            nvml_m.get_timepoint(), scorep::chrono::measurement_clock::now());
+
         nvml_m.stop_measurement();
         if (nvml_thread.joinable()) {
             nvml_thread.join();
         }
-        //        convert.synchronize_point();
 
-        //        for (auto& handle : get_handles())
-        //        {
-        //            handle.data = get_value(handle.metric, nvml_devices[handle.device_id]);
-        //        }
-        logging::info() << "stop called";
+        logging::info() << "Successfully stopped NVML measurement.";
     }
 
     // Will be called post mortem by the measurement environment
@@ -147,26 +146,14 @@ public:
 
         auto values = nvml_m.get_readings(handle);
         for (auto& value : values) {
-            cursor.write(value);
+            cursor.write(time_converter.to_ticks(value.first), value.second);
         }
         logging::debug() << "get_all_values wrote " << values.size() << " values (out of which "
                          << cursor.size() << " are in the valid time range)";
-
-        //        unsigned long long last_seen = begin.count();
-        //        std::vector<pair_time_sampling_t> data = handle.metric->get_value(nvml_devices[handle.device_id], last_seen);
-        //        for (auto pair : data)
-        //        {
-        //            //const auto time = chrono::system
-        //            scorep::chrono::ticks ticks = scorep::chrono::ticks(pair.first);
-        ////            scorep::chrono::ticks timestamp = convert.to_ticks(ticks); // TODO convert timestamp
-        //            cursor.write(ticks,  (std::uint64_t) pair.second);
-        //            //  cursor.write(convert.to_ticks(pair.first), pair.second);
-        //        }
     }
 
 private:
-    scorep::chrono::ticks begin, end;
-    scorep::chrono::time_convert<> convert;
+    scorep::chrono::time_convert<> time_converter;
 
     nvml_measurement_thread nvml_m;
     std::thread nvml_thread;
