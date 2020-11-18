@@ -25,7 +25,7 @@ class nvml_sampling_plugin
 public:
     nvml_sampling_plugin()
         : nvml_m(std::chrono::milliseconds(
-              stoi(scorep::environment_variable::get("interval", "50000"))))
+              stoi(scorep::environment_variable::get("interval", "5000"))))
     {
         nvmlReturn_t nvml = nvmlInit_v2();
         if (NVML_SUCCESS != nvml) {

@@ -21,7 +21,7 @@ Sampling mode seems to be more efficient than async or sync plugin
 - `SCOREP_METRIC_NVML_SAMPLING_PLUGIN="power_usage,temperature"`
     
 Optional :
-- `SCOREP_METRIC_NVML_SAMPLING__PLUGIN_INTERVAL="3"` (Interval in seconds)
+- `SCOREP_METRIC_NVML_SAMPLING__PLUGIN_INTERVAL="5000"` (Interval in milli seconds, default - `SCOREP_METRIC_NVML_SAMPLING__PLUGIN_INTERVAL="5000"` (Interval in milli seconds, default 5000ms)
 
 #### Available metrics
 - `clock_sm`
