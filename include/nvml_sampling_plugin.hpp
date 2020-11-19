@@ -1,4 +1,5 @@
 #include "nvml_measurement_thread.hpp"
+#include "nvml_scorep_helper.hpp"
 #include "nvml_types.hpp"
 #include "nvml_wrapper.hpp"
 
@@ -69,33 +70,11 @@ public:
             scorep::plugin::metric_property property = scorep::plugin::metric_property(
                 new_name, metric_type->get_desc(), metric_type->get_unit());
 
-            metric_datatype datatype = metric_type->get_datatype();
-            switch (datatype) {
-            case metric_datatype::UINT:
-                property.value_uint();
-                break;
-            case metric_datatype::INT:
-                property.value_int();
-                break;
-            case metric_datatype::DOUBLE:
-                property.value_double();
-                break;
-            default:
+            if (!set_scorep_datatype(metric_type, property)) {
                 throw std::runtime_error("Unknown datatype for metric " + metric_name);
             }
 
-            metric_measure_type measure_type = metric_type->get_measure_type();
-            switch (measure_type) {
-            case metric_measure_type::ABS:
-                property.absolute_point();
-                break;
-            case metric_measure_type::REL:
-                property.relative_point();
-                break;
-            case metric_measure_type::ACCU:
-                property.accumulated_point();
-                break;
-            default:
+            if (!set_scorep_measure_type(metric_type, property)) {
                 throw std::runtime_error("Unknown measure type for metric " + metric_name);
             }
 
