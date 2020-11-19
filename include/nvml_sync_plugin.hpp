@@ -71,9 +71,9 @@ public:
             auto handle = make_handle(new_name, nvml_t{metric_name, i, metric_type});
 
             scorep::plugin::metric_property property = scorep::plugin::metric_property(
-                new_name, metric_type->getDesc(), metric_type->getUnit());
+                new_name, metric_type->get_desc(), metric_type->get_unit());
 
-            metric_datatype datatype = metric_type->getDatatype();
+            metric_datatype datatype = metric_type->get_datatype();
             switch (datatype) {
             case metric_datatype::UINT:
                 property.value_uint();
@@ -88,7 +88,7 @@ public:
                 throw std::runtime_error("Unknown datatype for metric " + metric_name);
             }
 
-            metric_measure_type measure_type = metric_type->getMeasureType();
+            metric_measure_type measure_type = metric_type->get_measure_type();
             switch (measure_type) {
             case metric_measure_type::ABS:
                 property.absolute_point();

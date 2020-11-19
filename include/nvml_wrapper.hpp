@@ -26,22 +26,22 @@ class Nvml_Metric {
 public:
     virtual unsigned int get_value(nvmlDevice_t& device) = 0;
 
-    const std::string& getDesc() const
+    const std::string& get_desc() const
     {
         return desc;
     }
 
-    const std::string& getUnit() const
+    const std::string& get_unit() const
     {
         return unit;
     }
 
-    const metric_measure_type getMeasureType() const
+    const metric_measure_type get_measure_type() const
     {
         return type;
     }
 
-    const metric_datatype getDatatype() const
+    const metric_datatype get_datatype() const
     {
         return datatype;
     }
