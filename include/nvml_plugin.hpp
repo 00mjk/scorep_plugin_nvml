@@ -1,46 +1,34 @@
 #include "nvml.h"
+#include "nvml_measurement_thread.hpp"
+#include "nvml_types.hpp"
 #include "nvml_wrapper.hpp"
-
 #include <scorep/plugin/plugin.hpp>
 
 #include <nvml.h>
 
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <chrono>
 
 using namespace scorep::plugin::policy;
 
 using scorep::plugin::logging;
 
-struct nvml_t {
-    nvml_t(const std::string& name_, unsigned int device_id_, Nvml_Metric* metric_)
-        : name(name_), device_id(device_id_), metric(metric_)
-    {
-    }
-    ~nvml_t()
-    {
-        logging::info() << "call destructor of " << name;
-    }
-    std::string name;
-    unsigned int device_id;
-    Nvml_Metric* metric;
-};
-
 template <typename T, typename Policies>
-using nvml_object_id = scorep::plugin::policy::object_id<nvml_t, T, Policies>;
+using nvml_object_id =
+    scorep::plugin::policy::object_id<nvml_t<Nvml_Metric>, T, Policies>;
 
 class nvml_plugin
-    : public scorep::plugin::base<nvml_plugin, async, per_host, scorep_clock, frequent, nvml_object_id> {
+    : public scorep::plugin::base<nvml_plugin, async, per_host, scorep_clock, post_mortem, nvml_object_id> {
 public:
     nvml_plugin()
+        : nvml_m(std::chrono::milliseconds(
+              stoi(scorep::environment_variable::get("interval", "50"))))
     {
         nvmlReturn_t ret = nvmlInit_v2();
         check_nvml_return(ret);
-
-        nvml_devices = get_visible_devices();
     }
 
     ~nvml_plugin()
@@ -59,11 +47,13 @@ public:
 
         Nvml_Metric* metric_type = metric_name_2_nvml_function(metric_name);
 
+        std::vector<nvmlDevice_t> nvml_devices = get_visible_devices();
         for (unsigned int i = 0; i < nvml_devices.size(); ++i) {
             /* TODO use device index by nvmlDeviceGetIndex( nvmlDevice_t device, unsigned int* index ) */
 
             std::string new_name = metric_name + " on CUDA: " + std::to_string(i);
-            auto handle = make_handle(new_name, nvml_t{metric_name, i, metric_type});
+            auto handle = make_handle(
+                new_name, nvml_t<Nvml_Metric>{metric_name, nvml_devices[i], metric_type});
 
             scorep::plugin::metric_property property = scorep::plugin::metric_property(
                 new_name, metric_type->get_desc(), metric_type->get_unit());
@@ -100,55 +90,65 @@ public:
 
             properties.push_back(property);
         }
+
+        nvml_m.add_handles(get_handles());
+
         return properties;
     }
 
-    static uint64_t get_metric_gather_interval()
-    {
-        logging::info() << "get_metric_gather_interval called";
-        unsigned long interval = std::stoul(scorep::environment_variable::get("INTERVAL", "50"));
-        return interval * 1000 / CLOCKS_PER_SEC;
-    }
-
-    void add_metric(nvml_t& handle)
+    void add_metric(nvml_t<Nvml_Metric>& handle)
     {
         logging::info() << "add metric called with: " << handle.name
-                        << " on CUDA " << handle.device_id;
+                        << " on CUDA " << handle.device_idx;
     }
 
     // start your measurement in this method
     void start()
     {
-        begin = scorep::chrono::measurement_clock::now();
+        nvml_thread = std::thread([this]() { this->nvml_m.measurement(); });
+
+        time_converter.synchronize_point(
+            nvml_m.get_timepoint(), scorep::chrono::measurement_clock::now());
+
+        logging::info() << "Successfully started NVML measurement.";
     }
 
     // stop your measurement in this method
     void stop()
     {
-        end = scorep::chrono::measurement_clock::now();
+        time_converter.synchronize_point(
+            nvml_m.get_timepoint(), scorep::chrono::measurement_clock::now());
 
-        //        for (auto& handle : get_handles())
-        //        {
-        //            handle.data = get_value(handle.metric, nvml_devices[handle.device_id]);
-        //        }
-        logging::info() << "stop called";
+        nvml_m.stop_measurement();
+        if (nvml_thread.joinable()) {
+            nvml_thread.join();
+        }
+
+        logging::info() << "Successfully stopped NVML measurement.";
     }
 
     // Will be called post mortem by the measurement environment
     // You return all values measured.
     template <typename C>
-    void get_all_values(nvml_t& handle, C& cursor)
+    void get_all_values(nvml_t<Nvml_Metric>& handle, C& cursor)
     {
         logging::info() << "get_all_values called with: " << handle.name
-                        << " CUDA " << handle.device_id;
+                        << " CUDA " << handle.device_idx;
 
-        std::uint64_t data = handle.metric->get_value(nvml_devices[handle.device_id]);
-        cursor.write(end, data);
+        auto values = nvml_m.get_readings(handle);
+        for (auto& value : values) {
+            cursor.write(time_converter.to_ticks(value.first), value.second);
+        }
+
+        logging::debug() << "get_all_values wrote " << values.size() << " values (out of which "
+                         << cursor.size() << " are in the valid time range)";
     }
 
 private:
-    std::vector<nvmlDevice_t> nvml_devices;
-    scorep::chrono::ticks begin, end;
+    scorep::chrono::time_convert<> time_converter;
+
+    nvml_measurement_thread<Nvml_Metric> nvml_m;
+    std::thread nvml_thread;
 
 private:
     std::vector<nvmlDevice_t> get_visible_devices()
