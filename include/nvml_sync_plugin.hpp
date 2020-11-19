@@ -1,3 +1,4 @@
+#include "nvml_types.hpp"
 #include "nvml_wrapper.hpp"
 
 #include <scorep/plugin/plugin.hpp>
@@ -13,22 +14,9 @@ using namespace scorep::plugin::policy;
 
 using scorep::plugin::logging;
 
-struct nvml_t {
-    nvml_t(const std::string& name_, unsigned int device_id_, Nvml_Metric* metric_)
-        : name(name_), device_id(device_id_), metric(metric_)
-    {
-    }
-    ~nvml_t()
-    {
-        logging::info() << "call destructor of " << name;
-    }
-    std::string name;
-    unsigned int device_id;
-    Nvml_Metric* metric;
-};
-
 template <typename T, typename Policies>
-using nvml_object_id = scorep::plugin::policy::object_id<nvml_t, T, Policies>;
+using nvml_object_id =
+    scorep::plugin::policy::object_id<nvml_t<Nvml_Metric>, T, Policies>;
 
 class nvml_sync_plugin
     : public scorep::plugin::base<nvml_sync_plugin, sync, per_host, scorep_clock, nvml_object_id> {
@@ -40,7 +28,6 @@ public:
             throw std::runtime_error("Could not start NVML. Code: " +
                                      std::string(nvmlErrorString(nvml)));
         }
-        nvml_devices = get_visible_devices();
     }
 
     ~nvml_sync_plugin()
@@ -53,7 +40,7 @@ public:
                             << std::string(nvmlErrorString(nvml));
         }
     }
-    
+
     // Convert a named metric (may contain wildcards or so) to a vector of
     // actual metrics (may have a different name)
     std::vector<scorep::plugin::metric_property> get_metric_properties(const std::string& metric_name)
@@ -64,11 +51,13 @@ public:
 
         Nvml_Metric* metric_type = metric_name_2_nvml_function(metric_name);
 
+        std::vector<nvmlDevice_t> nvml_devices;
         for (unsigned int i = 0; i < nvml_devices.size(); ++i) {
             /* TODO use device index by nvmlDeviceGetIndex( nvmlDevice_t device, unsigned int* index ) */
 
             std::string new_name = metric_name + " on CUDA: " + std::to_string(i);
-            auto handle = make_handle(new_name, nvml_t{metric_name, i, metric_type});
+            auto handle = make_handle(
+                new_name, nvml_t<Nvml_Metric>{metric_name, nvml_devices[i], metric_type});
 
             scorep::plugin::metric_property property = scorep::plugin::metric_property(
                 new_name, metric_type->get_desc(), metric_type->get_unit());
@@ -108,29 +97,22 @@ public:
         return properties;
     }
 
-    void add_metric(nvml_t& handle)
+    void add_metric(nvml_t<Nvml_Metric>& handle)
     {
         logging::info() << "add metric called with: " << handle.name
-                        << " on CUDA " << handle.device_id;
+                        << " on CUDA " << handle.device_idx;
     }
 
-    // Will be called post mortem by the measurement environment
-    // You return all values measured.
     template <typename P>
-    bool get_optional_value(nvml_t& handle, P &proxy)
+    bool get_optional_value(nvml_t<Nvml_Metric>& handle, P& proxy)
     {
         logging::info() << "get_optional_value called with: " << handle.name
-                        << " CUDA " << handle.device_id;
+                        << " CUDA " << handle.device_idx;
 
-        std::uint64_t data = handle.metric->get_value(nvml_devices[handle.device_id]);
+        std::uint64_t data = handle.metric->get_value(handle.device);
         proxy.write(data);
         return true;
     }
-
-private:
-    std::vector<nvmlDevice_t> nvml_devices;
-    scorep::chrono::ticks begin, end;
-    int counter = 0;
 
 private:
     std::vector<nvmlDevice_t> get_visible_devices()

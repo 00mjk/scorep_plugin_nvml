@@ -54,11 +54,12 @@ public:
 
         logging::info() << "get metric properties called with: " << metric_name;
 
+        Nvml_Sampling_Metric* metric_type =
+            metric_name_2_nvml_sampling_function(metric_name);
+
         std::vector<nvmlDevice_t> nvml_devices = get_visible_devices();
         for (unsigned int i = 0; i < nvml_devices.size(); ++i) {
             /* TODO use device index by nvmlDeviceGetIndex( nvmlDevice_t device, unsigned int* index ) */
-            Nvml_Sampling_Metric* metric_type =
-                metric_name_2_nvml_sampling_function(metric_name);
 
             std::string new_name = metric_name + " on CUDA: " + std::to_string(i);
             auto handle =
