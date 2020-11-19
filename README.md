@@ -2,20 +2,27 @@
 This code provides a Score-P plugin to access [NVIDIA Management Library (NVML)](https://developer.nvidia.com/nvidia-management-library-nvml)
 
 ## Installation
-If not present on your system get NVML from [NVIDIA Management Library (NVML)](https://developer.nvidia.com/nvidia-management-library-nvml) and istall it with
+If not present on your system get NVML from [NVIDIA Management Library (NVML)](https://developer.nvidia.com/nvidia-management-library-nvml), install it with
 `./gdk_linux_*_release.run --installdir=<PATH> --silent`
-Set Paths
+and setup paths
+
 ```
-    git clone --recurse-submodules git@github.com:NanoNabla/scorep_plugin_nvml.git
-    cd scorep_plugin_nvml
-    mkdir build && cd build
-    cmake ../
-    make
+git clone --recurse-submodules git@github.com:NanoNabla/scorep_plugin_nvml.git
+cd scorep_plugin_nvml
+mkdir build && cd build
+cmake ../
+make
+
+# copy libnvml*_plugin.so into your LD_LIBRARY_PATH
 ```
 
 
 ## Usage
-Sampling mode seems to be more efficient than async or sync plugin
+Sampling plugin seems to be more efficient than async (which also uses a way of sampling) or sync plugin but supports less metrics
+
+> The advantage of using this method for samples in contrast to polling via existing methods is to get get higher frequency data at lower polling cost. 
+> -- <cite>[NVML Docs](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html#group__nvmlDeviceQueries_1gb7d2a6d2a9b4584cd985765d1ff46c94) </cite>
+
 ### Sampling
 - `SCOREP_METRIC_PLUGINS=nvml_sampling_plugin`
 - `SCOREP_METRIC_NVML_SAMPLING_PLUGIN="power_usage,temperature"`
@@ -30,13 +37,12 @@ Optional :
 - `utilization_gpu`
 - `utilization_mem`
 
-
 ### Async
 - `SCOREP_METRIC_PLUGINS=nvml_plugin`
 - `SCOREP_METRIC_NVML_SYNC_PLUGIN="power_usage,temperature"`
     
 Optional :
-- `SCOREP_METRIC_NVML_PLUGIN_INTERVAL="3"` (Interval in milliseconds)
+- `SCOREP_METRIC_NVML_PLUGIN_INTERVAL="50"` (measurement interval in milliseconds, default 50ms)
     
 ### Sync Plugin
 
