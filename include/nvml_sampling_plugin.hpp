@@ -18,7 +18,8 @@ using namespace scorep::plugin::policy;
 using scorep::plugin::logging;
 
 template <typename T, typename Policies>
-using nvml_object_id = scorep::plugin::policy::object_id<nvml_t, T, Policies>;
+using nvml_object_id =
+    scorep::plugin::policy::object_id<nvml_t<Nvml_Sampling_Metric>, T, Policies>;
 
 class nvml_sampling_plugin
     : public scorep::plugin::base<nvml_sampling_plugin, async, per_host, scorep_clock, post_mortem, nvml_object_id> {
@@ -60,8 +61,9 @@ public:
                 metric_name_2_nvml_sampling_function(metric_name);
 
             std::string new_name = metric_name + " on CUDA: " + std::to_string(i);
-            auto handle = make_handle(
-                new_name, nvml_t{metric_name, nvml_devices[i], metric_type});
+            auto handle =
+                make_handle(new_name, nvml_t<Nvml_Sampling_Metric>{
+                                          metric_name, nvml_devices[i], metric_type});
 
             scorep::plugin::metric_property property = scorep::plugin::metric_property(
                 new_name, metric_type->get_desc(), metric_type->get_unit());
@@ -104,7 +106,7 @@ public:
         return properties;
     }
 
-    void add_metric(nvml_t& handle)
+    void add_metric(nvml_t<Nvml_Sampling_Metric>& handle)
     {
         logging::info() << "add metric called with: " << handle.name
                         << " on CUDA " << handle.device_idx;
@@ -114,7 +116,7 @@ public:
     void start()
     {
         nvml_thread =
-            std::thread([this]() { this->nvml_m.measurement_sampling(); });
+            std::thread([this]() { this->nvml_m.sampling_measurement(); });
 
         time_converter.synchronize_point(
             nvml_m.get_timepoint(), scorep::chrono::measurement_clock::now());
@@ -139,7 +141,7 @@ public:
     // Will be called post mortem by the measurement environment
     // You return all values measured.
     template <typename C>
-    void get_all_values(nvml_t& handle, C& cursor)
+    void get_all_values(nvml_t<Nvml_Sampling_Metric>& handle, C& cursor)
     {
         logging::info() << "get_all_values called with: " << handle.name
                         << " CUDA " << handle.device_idx;
@@ -148,6 +150,7 @@ public:
         for (auto& value : values) {
             cursor.write(time_converter.to_ticks(value.first), value.second);
         }
+
         logging::debug() << "get_all_values wrote " << values.size() << " values (out of which "
                          << cursor.size() << " are in the valid time range)";
     }
@@ -155,7 +158,7 @@ public:
 private:
     scorep::chrono::time_convert<> time_converter;
 
-    nvml_measurement_thread nvml_m;
+    nvml_measurement_thread<Nvml_Sampling_Metric> nvml_m;
     std::thread nvml_thread;
 
 private:

@@ -15,9 +15,10 @@ using pair_chrono_value_t = std::pair<system_time_point_t, std::uint64_t>;
 
 using scorep::plugin::logging;
 
+template <typename T>
 class nvml_t {
 public:
-    nvml_t(const std::string& name_, nvmlDevice_t device_, Nvml_Sampling_Metric* metric_)
+    nvml_t(const std::string& name_, nvmlDevice_t device_, T* metric_)
         : name(name_), device(device_), metric(metric_)
     {
         nvmlReturn_t ret = nvmlDeviceGetIndex(device, &device_idx);
@@ -43,7 +44,7 @@ public:
     }
 
     std::string name;
-    Nvml_Sampling_Metric* metric;
+    T* metric;
     unsigned int device_idx;
     nvmlDevice_t device;
 };
@@ -51,7 +52,8 @@ public:
 namespace std {
 /** operator to print the metric handle
  */
-inline ostream& operator<<(ostream& s, const nvml_t& metric)
+template <typename T>
+inline ostream& operator<<(ostream& s, const nvml_t<T>& metric)
 {
     s << "(" << metric.name << " on CUDA " << std::to_string(metric.device_idx) << ")";
     return s;
@@ -59,9 +61,9 @@ inline ostream& operator<<(ostream& s, const nvml_t& metric)
 
 /** hashing using the metric name and device id
  */
-template <>
-struct hash<nvml_t> {
-    size_t inline operator()(const nvml_t& metric) const
+template <typename T>
+struct hash<nvml_t<T>> {
+    size_t inline operator()(const nvml_t<T>& metric) const
     {
         return std::hash<std::string>{}(metric.name + std::to_string(metric.device_idx));
     }

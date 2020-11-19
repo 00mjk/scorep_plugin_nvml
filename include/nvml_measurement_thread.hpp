@@ -13,6 +13,7 @@
 #include "nvml_types.hpp"
 #include "nvml_wrapper.hpp"
 
+template <typename T>
 class nvml_measurement_thread {
 public:
     nvml_measurement_thread(std::chrono::milliseconds interval_)
@@ -21,21 +22,42 @@ public:
         last = system_clock_t::now();
     }
 
-    void add_handles(const std::vector<nvml_t>& handles)
+    void add_handles(const std::vector<nvml_t<T>>& handles)
     {
         for (auto& handle : handles) {
-            measurements.insert(std::make_pair(std::ref(const_cast<nvml_t&>(handle)),
+            measurements.insert(std::make_pair(std::ref(const_cast<nvml_t<T>&>(handle)),
                                                std::vector<pair_chrono_value_t>()));
         }
     }
 
-    std::vector<pair_chrono_value_t> get_readings(nvml_t& handle)
+    std::vector<pair_chrono_value_t> get_readings(nvml_t<T>& handle)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         return measurements[handle];
     }
 
-    void measurement_sampling()
+    void measurement()
+    {
+        stop = false;
+
+        while (!stop) {
+            try {
+                std::lock_guard<std::mutex> lock(m_mutex);
+                for (auto& metric_it : measurements) {
+                    std::uint64_t value = metric_it.first.get().metric->get_value(
+                        metric_it.first.get().device);
+
+                    metric_it.second.push_back(std::make_pair(system_clock_t::now(), value));
+                }
+            }
+            catch (scorep::exception::null_pointer& e) {
+                logging::warn() << "Score-P Clock not set.";
+            }
+            std::this_thread::sleep_for(interval);
+        }
+    }
+
+    void sampling_measurement()
     {
         stop = false;
 
@@ -63,9 +85,9 @@ public:
             catch (scorep::exception::null_pointer& e) {
                 logging::warn() << "Score-P Clock not set.";
             }
-            last = system_clock_t::now();
-            std::this_thread::sleep_for(interval);
         }
+        last = system_clock_t::now();
+        std::this_thread::sleep_for(interval);
     }
 
     void stop_measurement()
@@ -80,7 +102,6 @@ public:
     }
 
 protected:
-private:
     std::chrono::milliseconds interval;
 
     std::mutex m_mutex;
@@ -89,7 +110,7 @@ private:
 
     system_time_point_t last;
 
-    std::unordered_map<std::reference_wrapper<nvml_t>, std::vector<pair_chrono_value_t>, std::hash<nvml_t>, std::equal_to<nvml_t>> measurements;
+    std::unordered_map<std::reference_wrapper<nvml_t<T>>, std::vector<pair_chrono_value_t>, std::hash<nvml_t<T>>, std::equal_to<nvml_t<T>>> measurements;
 };
 
 #endif // SCOREP_PLUGIN_NVML_NVML_MEASUREMENT_THREAD_HPP
