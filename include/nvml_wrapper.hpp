@@ -58,6 +58,14 @@ protected:
 
 class Power : public Nvml_Metric {
 public:
+    Power()
+    {
+        desc = "Power Consumption";
+        unit = "mW";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
+
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret = nvmlDeviceGetPowerUsage(device, &value);
@@ -65,16 +73,18 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "Power Consumption";
-    const std::string unit = "mW";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Temperature : public Nvml_Metric {
 public:
+    Temperature()
+    {
+        desc = "Board Temperature";
+        unit = "°C";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
+
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret = nvmlDeviceGetTemperature(
@@ -83,16 +93,18 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "Board Temperature";
-    const std::string unit = "°C";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Clock_Sm : public Nvml_Metric {
 public:
+    Clock_Sm()
+    {
+        desc = "SM clocks";
+        unit = "MHz";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
+
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret =
@@ -101,16 +113,18 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "SM clocks";
-    const std::string unit = "MHz";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Clock_Mem : public Nvml_Metric {
 public:
+    Clock_Mem()
+    {
+        desc = "Memory clocks";
+        unit = "MHz";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
+
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret =
@@ -119,16 +133,18 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "Memory clocks";
-    const std::string unit = "MHz";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Fan_Speed : public Nvml_Metric {
 public:
+    Fan_Speed()
+    {
+        desc = "Fan speed";
+        unit = "";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
+
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret = nvmlDeviceGetFanSpeed(device, &value);
@@ -136,16 +152,18 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "Fan speed";
-    const std::string unit = "";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Mem_Free : public Nvml_Metric {
 public:
+    Mem_Free()
+    {
+        desc = "Free memory";
+        unit = "Bytes";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
+
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlMemory_t mem;
@@ -155,16 +173,17 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "Free memory";
-    const std::string unit = "Bytes";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Mem_Used : public Nvml_Metric {
 public:
+    Mem_Used()
+    {
+        desc = "Used memory";
+        unit = "Bytes";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlMemory_t mem;
@@ -174,16 +193,17 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "Used memory";
-    const std::string unit = "Bytes";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Mem_Total : public Nvml_Metric {
 public:
+    Mem_Total()
+    {
+        desc = "Total memory";
+        unit = "Bytes";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlMemory_t mem;
@@ -193,16 +213,17 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "Total memory";
-    const std::string unit = "Bytes";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Pcie_Send : public Nvml_Metric {
 public:
+    Pcie_Send()
+    {
+        desc = "PCIe Send";
+        unit = "Bytes";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret = nvmlDeviceGetPcieThroughput(
@@ -211,16 +232,17 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "PCIe Send";
-    const std::string unit = "Bytes";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Pcie_Recv : public Nvml_Metric {
 public:
+    Pcie_Recv()
+    {
+        desc = "PCIe Recv";
+        unit = "Bytes";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlReturn_t ret = nvmlDeviceGetPcieThroughput(
@@ -229,16 +251,17 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "PCIe Recv";
-    const std::string unit = "Bytes";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Utilization_Gpu : public Nvml_Metric {
 public:
+    Utilization_Gpu()
+    {
+        desc = "GPU Utilization";
+        unit = "%";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlUtilization_t util;
@@ -248,16 +271,17 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "GPU Utilization";
-    const std::string unit = "";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Utilization_Mem : public Nvml_Metric {
 public:
+    Utilization_Mem()
+    {
+        desc = "Memory Utilization";
+        unit = "%";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+    }
     unsigned int get_value(nvmlDevice_t& device)
     {
         nvmlUtilization_t util;
@@ -267,20 +291,13 @@ public:
 
         return value;
     }
-
-protected:
-    const std::string desc = "Memory Utilization";
-    const std::string unit = "";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
 };
 
 class Nvml_Sampling_Metric {
 public:
-    std::vector<pair_time_sampling_t> get_value(nvmlDevice_t device,
-                                                unsigned long long last_seen = 0)
+    virtual std::vector<pair_time_sampling_t> get_value(nvmlDevice_t device,
+                                                        unsigned long long last_seen = 0)
     {
-        nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_GPU_UTILIZATION_SAMPLES;
         nvmlValueType_t val_type;
         unsigned int sample_count;
         nvmlSample_t* samples;
@@ -346,61 +363,68 @@ protected:
     const std::string unit;
     metric_measure_type type;
     metric_datatype datatype;
-};
 
-class Power_Sampling : public Nvml_Sampling_Metric {
-protected:
-    const std::string desc = "Power consumption (samples)";
-    const std::string unit = "mW";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
-
-protected:
-    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_TOTAL_POWER_SAMPLES;
-};
-
-class Utilization_Gpu_Sampling : public Nvml_Sampling_Metric {
-protected:
-    const std::string desc = "GPU utilization (samples)";
-    const std::string unit = "";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
-
-protected:
     nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_GPU_UTILIZATION_SAMPLES;
 };
 
-class Utilization_Mem_Sampling : public Nvml_Sampling_Metric {
-protected:
-    const std::string desc = "Memory utilization (samples)";
-    const std::string unit = "";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
+class Power_Sampling : public Nvml_Sampling_Metric {
+    Power_Sampling()
+    {
+        desc = "Power consumption (samples)";
+        unit = "mW";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
 
-protected:
-    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_MEMORY_CLK_SAMPLES;
+        nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_TOTAL_POWER_SAMPLES;
+    }
+};
+
+class Utilization_Gpu_Sampling : public Nvml_Sampling_Metric {
+    Utilization_Gpu_Sampling()
+    {
+        desc = "GPU utilization (samples)";
+        unit = "%";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+
+        sample_type = nvmlSamplingType_t::NVML_GPU_UTILIZATION_SAMPLES;
+    }
+};
+
+class Utilization_Mem_Sampling : public Nvml_Sampling_Metric {
+    Utilization_Mem_Sampling()
+    {
+        desc = "Memory utilization (samples)";
+        unit = "%";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
+
+        sample_type = nvmlSamplingType_t::NVML_MEMORY_UTILIZATION_SAMPLES;
+    }
 };
 
 class Clock_Sm_Sampling : public Nvml_Sampling_Metric {
-protected:
-    const std::string desc = "SM clocks (sample)";
-    const std::string unit = "MHz";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
+    Clock_Sm_Sampling()
+    {
+        desc = "SM clocks (sample)";
+        unit = "MHz";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
 
-protected:
-    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_PROCESSOR_CLK_SAMPLES;
+        sample_type = nvmlSamplingType_t::NVML_PROCESSOR_CLK_SAMPLES;
+    }
 };
 
 class Clock_Mem_Sampling : public Nvml_Sampling_Metric {
-protected:
-    const std::string desc = "Memory clocks (sample)";
-    const std::string unit = "MHz";
-    const metric_measure_type type = metric_measure_type::ABS;
-    const metric_datatype datatype = metric_datatype::UINT;
+    Clock_Mem_Sampling()
+    {
+        desc = "Memory clocks (sample)";
+        unit = "MHz";
+        type = metric_measure_type::ABS;
+        datatype = metric_datatype::UINT;
 
-protected:
-    nvmlSamplingType_t sample_type = nvmlSamplingType_t::NVML_MEMORY_CLK_SAMPLES;
+        sample_type = nvmlSamplingType_t::NVML_MEMORY_CLK_SAMPLES;
+    }
 };
 
 Nvml_Metric* metric_name_2_nvml_function(std::string metric_name)
